@@ -1,28 +1,31 @@
-//import com.fasterxml.jackson.databind.ObjectMapper;
-//import org.apache.commons.io.IOUtils;
+import org.json.simple.JSONArray;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.ParseException;
 
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-
+import java.util.Iterator;
 
 public class Test {
-    public static void main(String[] args) throws Exception {
-
+    public static void main(String[] args){
+        //Creating a JSONParser object
+        JSONParser jsonParser = new JSONParser();
+        try {
+            //Parsing the contents of the JSON file
+            JSONArray jsonArray = (JSONArray) jsonParser.parse(new FileReader("/Users/eloymarinciudad/Documents/MIRI/1B/BDM/LAB1/BDM_Project1/target/classes/idealista/2020_01_02_idealista.json"));
+            Iterator<JSONObject> iterator = jsonArray.iterator();
+            while(iterator.hasNext()) {
+                System.out.println(iterator.next().get("propertyCode"));
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
     }
 
-//    private static void test1() throws IOException {
-//        String file = readFileFromResources("/idealista/2020_01_02_idealista.json");
-//        System.out.println(file);
-//    }
-//
-//    private static void test2() {
-//        ObjectMapper mapper = new ObjectMapper();
-//        InputStream is = Test.class.getResourceAsStream("/test.json");
-//        // testObj = mapper.readValue(is, Test.class);
-//    }
-//
-//    private static String readFileFromResources(String fileName) throws IOException {
-//        return IOUtils.resourceToString(fileName, StandardCharsets.UTF_8);
-//    }
 }
