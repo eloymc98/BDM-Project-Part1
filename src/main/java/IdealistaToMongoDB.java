@@ -25,7 +25,6 @@ import java.util.regex.Pattern;
 
 public class IdealistaToMongoDB {
     private final MongoClient client = new MongoClient("10.4.41.147");
-    // TODO: Create database and collection in the VM
     private final MongoDatabase database = client.getDatabase("bdm_project1");
     private final MongoCollection<Document> idealistaCollection = database.getCollection("idealista");
     private final Pattern datePattern = Pattern.compile("(19|20)\\d\\d_(0[1-9]|1[012])_(0[1-9]|[12][0-9]|3[01])");
@@ -35,10 +34,10 @@ public class IdealistaToMongoDB {
         List<String> filesList = new ArrayList<>();
 
         final File jarFile = new File(IdealistaToMongoDB.class.getProtectionDomain().getCodeSource().getLocation().getPath());
-        if(jarFile.isFile()) {  // Run with JAR file
+        if (jarFile.isFile()) {  // Run with JAR file
             final JarFile jar = new JarFile(jarFile);
             final Enumeration<JarEntry> entries = jar.entries(); //gives ALL entries in jar
-            while(entries.hasMoreElements()) {
+            while (entries.hasMoreElements()) {
                 final String name = entries.nextElement().getName();
                 if (name.startsWith(path + "/")) { //filter according to the path
                     filesList.add(name);
@@ -67,18 +66,19 @@ public class IdealistaToMongoDB {
         String fileDate = null;
 
         Matcher m = datePattern.matcher(filePath);
-        if (m.find()){
+        if (m.find()) {
             fileDate = m.group().replace('_', '-');
         }
-
+        List<Document> documentList = new ArrayList<>();
         JSONParser jsonParser = new JSONParser();
         try {
             //Parsing the contents of the JSON file
             JSONArray jsonArray = (JSONArray) jsonParser.parse(new FileReader(filePath));
             Iterator<JSONObject> iterator = jsonArray.iterator();
             while (iterator.hasNext()) {
-                jsonToMongoDB(iterator.next(), fileDate);
+                documentList.add(jsonToDocument(iterator.next(), fileDate));
             }
+            idealistaCollection.insertMany(documentList);
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -88,10 +88,10 @@ public class IdealistaToMongoDB {
         }
     }
 
-    private void jsonToMongoDB(JSONObject jsonObject, String date) {
+    private Document jsonToDocument(JSONObject jsonObject, String date) {
         Document propertyDocument = new Document();
         propertyDocument.put("propertyCode", jsonObject.get("propertyCode"));
-        propertyDocument.put("date",date);
+        propertyDocument.put("date", date);
         propertyDocument.put("price", jsonObject.get("price"));
         propertyDocument.put("priceByArea", jsonObject.get("priceByArea"));
         propertyDocument.put("size", jsonObject.get("size"));
@@ -102,9 +102,7 @@ public class IdealistaToMongoDB {
         propertyDocument.put("municipality", jsonObject.get("municipality"));
         propertyDocument.put("district", jsonObject.get("district"));
         propertyDocument.put("neighborhood", jsonObject.get("neighborhood"));
-        idealistaCollection.insertOne(propertyDocument);
-
-
+        return propertyDocument;
     }
 
     public void idealistaToDB() throws IOException {
@@ -112,6 +110,7 @@ public class IdealistaToMongoDB {
         for (String path : filesPaths) {
             parseAndInsert(path);
         }
+        System.out.println("Data import succeeded!");
         client.close();
     }
 
