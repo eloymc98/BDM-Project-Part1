@@ -1,6 +1,7 @@
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Updates;
 import org.bson.Document;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -23,9 +24,11 @@ import java.util.jar.JarFile;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.mongodb.client.model.Filters.eq;
+
 public class IdealistaToMongoDB {
     private final MongoClient client = new MongoClient("10.4.41.147");
-    private final MongoDatabase database = client.getDatabase("bdm_project1");
+    private final MongoDatabase database = client.getDatabase("bdm2");
     private final MongoCollection<Document> idealistaCollection = database.getCollection("idealista");
     private final Pattern datePattern = Pattern.compile("(19|20)\\d\\d_(0[1-9]|1[012])_(0[1-9]|[12][0-9]|3[01])");
 
@@ -50,7 +53,6 @@ public class IdealistaToMongoDB {
                 try {
                     final File apps = new File(url.toURI());
                     for (File app : apps.listFiles()) {
-                        System.out.println(app.getPath());
                         filesList.add(app.getPath());
                     }
                 } catch (URISyntaxException ex) {
@@ -69,16 +71,15 @@ public class IdealistaToMongoDB {
         if (m.find()) {
             fileDate = m.group().replace('_', '-');
         }
-        List<Document> documentList = new ArrayList<>();
+
         JSONParser jsonParser = new JSONParser();
         try {
             //Parsing the contents of the JSON file
             JSONArray jsonArray = (JSONArray) jsonParser.parse(new FileReader(filePath));
             Iterator<JSONObject> iterator = jsonArray.iterator();
             while (iterator.hasNext()) {
-                documentList.add(jsonToDocument(iterator.next(), fileDate));
+                jsonToMongoDB(iterator.next(), fileDate);
             }
-            idealistaCollection.insertMany(documentList);
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -88,21 +89,39 @@ public class IdealistaToMongoDB {
         }
     }
 
-    private Document jsonToDocument(JSONObject jsonObject, String date) {
+    private void jsonToMongoDB(JSONObject jsonObject, String date) {
         Document propertyDocument = new Document();
-        propertyDocument.put("propertyCode", jsonObject.get("propertyCode"));
-        propertyDocument.put("date", date);
-        propertyDocument.put("price", jsonObject.get("price"));
-        propertyDocument.put("priceByArea", jsonObject.get("priceByArea"));
-        propertyDocument.put("size", jsonObject.get("size"));
-        propertyDocument.put("rooms", jsonObject.get("rooms"));
-        propertyDocument.put("bathrooms", jsonObject.get("bathrooms"));
-        propertyDocument.put("country", jsonObject.get("country"));
-        propertyDocument.put("province", jsonObject.get("province"));
-        propertyDocument.put("municipality", jsonObject.get("municipality"));
-        propertyDocument.put("district", jsonObject.get("district"));
-        propertyDocument.put("neighborhood", jsonObject.get("neighborhood"));
-        return propertyDocument;
+        propertyDocument.put("_id", jsonObject.get("propertyCode"));
+
+        if (idealistaCollection.countDocuments(propertyDocument) == 0) {
+            propertyDocument.put("size", jsonObject.get("size"));
+            propertyDocument.put("rooms", jsonObject.get("rooms"));
+            propertyDocument.put("bathrooms", jsonObject.get("bathrooms"));
+            propertyDocument.put("country", jsonObject.get("country"));
+            propertyDocument.put("province", jsonObject.get("province"));
+            propertyDocument.put("municipality", jsonObject.get("municipality"));
+            propertyDocument.put("district", jsonObject.get("district"));
+            propertyDocument.put("neighborhood", jsonObject.get("neighborhood"));
+
+            Document priceDocument = new Document();
+            priceDocument.put("date", date);
+            priceDocument.put("price", jsonObject.get("price"));
+            priceDocument.put("priceByArea", jsonObject.get("priceByArea"));
+
+            List<Document> prices = new ArrayList<>();
+            prices.add(priceDocument);
+
+            propertyDocument.put("prices", prices);
+            idealistaCollection.insertOne(propertyDocument);
+        } else {
+            Document newDatePrice = new Document();
+            newDatePrice.put("date", date);
+            newDatePrice.put("price", jsonObject.get("price"));
+            newDatePrice.put("priceByArea", jsonObject.get("priceByArea"));
+            idealistaCollection.updateOne(eq("_id", jsonObject.get("propertyCode")),
+                                        Updates.addToSet("prices", newDatePrice));
+        }
+
     }
 
     public void idealistaToDB() throws IOException {
