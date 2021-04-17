@@ -42,6 +42,7 @@ public class IdealistaToMongoDB {
     private void parseAndInsert(String filePath) {
         String fileDate = null;
 
+        // Get date from filename
         Matcher m = datePattern.matcher(filePath);
         if (m.find()) {
             fileDate = m.group().replace('_', '-');
@@ -60,9 +61,10 @@ public class IdealistaToMongoDB {
             while (iterator.hasNext()) {
                 JSONObject jsonObject = iterator.next();
                 String propertyId = (String) jsonObject.get("propertyCode");
+
+                // We check if a property appears more than once in the same day...
+                // In case of a duplicate property, we do not insert its data twice
                 if (!propertiesSet.contains(propertyId)) {
-                    // We check if a property appears more than once in the same day...
-                    // In case of a duplicate property, we do not insert its data twice
                     propertiesSet.add(propertyId);
                     jsonToMongoDB(jsonObject, fileDate);
                 }
@@ -100,6 +102,7 @@ public class IdealistaToMongoDB {
 
             }
 
+            // Create/update auxiliar structures
             neighborhoodProperties.forEach((k,v)-> updateAuxiliarDocument(k,v,"neighborhood"));
             districtProperties.forEach((k,v)-> updateAuxiliarDocument(k,v,"district"));
         } catch (IOException | ParseException e) {
@@ -129,6 +132,7 @@ public class IdealistaToMongoDB {
             propertyDocument.put("dates", dates);
             collection.insertOne(propertyDocument);
         } else {
+            // If the property document already exists, add new price and date data
             collection.updateOne(eq("_id", jsonObject.get("propertyCode")),
                     Updates.push("prices", jsonObject.get("price")));
             collection.updateOne(eq("_id", jsonObject.get("propertyCode")),

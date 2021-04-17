@@ -27,6 +27,8 @@ public class LookupTablesToMongoDB {
 
     private void parseAndInsert(List<String> filePaths) throws IOException {
         Map<String, Map<String,String>> lookupTablesMap = new HashMap<>();
+
+        // We merge (full-join style) both lookup tables
         for (String file: filePaths){
             CSVReader reader = new CSVReader(new FileReader(file));
             String name;
@@ -58,12 +60,6 @@ public class LookupTablesToMongoDB {
 
             }
         }
-
-        // We only want to keep neighborhoods that appear in both lookuptables
-        //        Map<String, Map<String,String>> lookupTablesUnion = lookupTablesMap.entrySet()
-        //                .stream()
-        //                .filter(map -> map.getValue().size() == 5)
-        //                .collect(Collectors.toMap(map -> map.getKey(), map -> map.getValue()));
 
         List<Document> documents = new ArrayList<>();
         lookupTablesMap.forEach((k,v) -> documents.add(parseToDocument(k,v)));

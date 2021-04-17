@@ -38,6 +38,7 @@ public class BCNIncomeToMongoDB {
         Iterator it = reader.iterator();
         while(it.hasNext()) {
             line = (String[]) it.next();
+            // Filter out missing data
             if (!line[2].equals("No consta")){
                 CSVToDocument(line);
             }
@@ -46,9 +47,8 @@ public class BCNIncomeToMongoDB {
 
     private void CSVToDocument(String[] line){
         Document neighborhoodRFDDocument = new Document();
-        // Document districtDocument = new Document();
 
-        // We use as _id for neighborhood documents the year and the neighborhood code
+        // We use as _id the year and the neighborhood code
         neighborhoodRFDDocument.put("_id", line[0] + line[3]);
         if (collection.countDocuments(neighborhoodRFDDocument) == 0){
             neighborhoodRFDDocument.put("year", Integer.parseInt(line[0]));
@@ -58,17 +58,5 @@ public class BCNIncomeToMongoDB {
             neighborhoodRFDDocument.put("rfdIndex", Float.parseFloat(line[6]));
             collection.insertOne(neighborhoodRFDDocument);
         }
-
-//        districtDocument.put("_id", line[1]);
-//        if (collection.countDocuments(districtDocument) == 0){
-//            List<String> neighborhoods = new ArrayList<>();
-//            neighborhoods.add(line[4]);
-//            districtDocument.put("district", line[2]);
-//            districtDocument.put("neighborhoods", neighborhoods);
-//            collection.insertOne(districtDocument);
-//        } else {
-//
-//        }
-
     }
 }
